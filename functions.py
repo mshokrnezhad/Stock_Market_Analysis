@@ -88,3 +88,51 @@ def build_prices_file(file_name, name, price):
         if n < len(name) - 1:
             prices_file.write("\n")
     prices_file.close()
+
+
+def get_price_list_from_excel_files(stock_list, excel_files_path, price_list_file_path):
+
+    build_preliminary_file_of_zeros(price_list_file_path, len(stock_list))
+    excel_files_list = [f for f in listdir(excel_files_path) if isfile(join(excel_files_path, f))]
+
+    print("Generating Prices File. Please Wait...")
+
+    price_list = [[0 for x in range(len(excel_files_list) + 1)] for y in range(len(stock_list))]
+    for pr in price_list:
+        pr[0] = 1
+
+    excel_file_index = 1
+    for excel_file in excel_files_list:
+        current_price = [0] * len(stock_list)
+        (wb_stocks, wb_prices) = get_work_book_info(excel_files_path + "/" + excel_file)
+        for wbs in wb_stocks:
+            current_price[stock_list.index(wbs)] = wb_prices[wb_stocks.index(wbs)]
+        temp_stock_index = 0
+        for pr in price_list:
+            pr[excel_file_index] = current_price[temp_stock_index]
+            temp_stock_index += 1
+        excel_file_index += 1
+        build_prices_file(price_list_file_path, stock_list, current_price)
+
+    print("Done!")
+
+    return price_list
+
+
+def get_price_list_from_processed_file(processed_file_path, number_of_rows, number_of_columns):
+
+    print("Loading Price List. Please Wait...")
+
+    with open(processed_file_path, encoding="utf8") as data:
+        price_list = [[0 for x in range(number_of_columns + 1)] for y in range(number_of_rows)]
+        row_index = 0
+        for line in data:
+            line = re.sub(" ", "_", str(line))
+            part = line.split()
+            for col_index in range(0, number_of_columns + 1):
+                price_list[row_index][col_index] = part[col_index]
+            row_index += 1
+
+    print("Done!")
+
+    return price_list
