@@ -2,7 +2,7 @@ import re
 import xlrd
 from os import listdir
 from os.path import isfile, join
-
+import numpy as np
 
 def get_stock_list_from_excel_files(excel_files_path, processed_file_path):
 
@@ -136,3 +136,56 @@ def get_price_list_from_processed_file(processed_file_path, number_of_rows, numb
     print("Done!")
 
     return price_list
+
+
+def normalize_features(X, number_of_rows, number_of_columns):
+
+    Z = np.zeros(shape=(number_of_rows, number_of_columns))
+
+    Z[:, 0] = X[:, 0]
+    for col in range(1, number_of_columns):
+        Z[:, col] = (X[:, col] - np.mean(X, axis=0)[col]) / np.std(X, axis=0, ddof=1)[col]
+
+    return Z
+
+def build_linear_data_set(stock_id, price_list, number_of_rows, number_of_columns):
+
+    X = [[0 for col in range(0, number_of_columns)] for row in range(0, number_of_rows)]
+    Y = [0 for row in range(0, number_of_rows)]
+    Normal_X = np.zeros(shape=(number_of_rows, number_of_columns))
+
+    for row in range(0, number_of_rows):
+        X[row][0] = 1
+        for col in range(1, number_of_columns):
+            X[row][col] = int(float(price_list[stock_id][row + col]))  # 1->0
+
+    for row in range(0, number_of_rows):
+        Y[row] = int(float(price_list[stock_id][row + number_of_columns]))  # 1->0
+
+    build_test_text_file(X, Y, number_of_rows, number_of_columns)
+
+    X = np.array(X)
+    Y = np.array(Y)
+
+    Normal_X = normalize_features(X, number_of_rows, number_of_columns)
+
+    return Normal_X, Y
+
+
+def build_test_text_file(X, Y, number_of_rows, number_of_columns):
+
+    file_name = "text_files/test.txt"
+    open("text_files/test.txt", 'w').close()
+    line_index = 0
+    new_line = [""] * number_of_rows
+    for row in range(0, number_of_rows):
+        for col in range(1, number_of_columns):
+            new_line[row] = new_line[row] + str(X[row][col]) + ","
+        new_line[row] = new_line[row] + str(Y[row])
+
+    file = open(file_name, "w")
+    for n in range(0, number_of_rows):
+        file.write(new_line[n])
+        if n < number_of_rows - 1:
+            file.write("\n")
+    file.close()
