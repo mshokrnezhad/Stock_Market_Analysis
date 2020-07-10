@@ -4,11 +4,10 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 
-def get_stock_list_from_excel_files(excel_files_path, processed_file_path):
+def get_stock_list_from_excel_files(excel_files_path, processed_file_path, excel_files_list):
 
     print("Extracting Stock List from Excel Files. Please Wait...")
 
-    excel_files_list = [f for f in listdir(excel_files_path) if isfile(join(excel_files_path, f))]
     stock_list = ["وتجارت"]
 
     for excel_file in excel_files_list:
@@ -152,15 +151,15 @@ def build_linear_data_set(stock_id, price_list, number_of_rows, number_of_column
 
     X = [[0 for col in range(0, number_of_columns)] for row in range(0, number_of_rows)]
     Y = [0 for row in range(0, number_of_rows)]
-    Normal_X = np.zeros(shape=(number_of_rows, number_of_columns))
+    # Normal_X = np.zeros(shape=(number_of_rows, number_of_columns))
 
     for row in range(0, number_of_rows):
         X[row][0] = 1
         for col in range(1, number_of_columns):
-            X[row][col] = int(float(price_list[stock_id][row + col]))  # 1->0
+            X[row][col] = int(float(price_list[stock_id][row + col]))
 
     for row in range(0, number_of_rows):
-        Y[row] = int(float(price_list[stock_id][row + number_of_columns]))  # 1->0
+        Y[row] = int(float(price_list[stock_id][row + number_of_columns]))
 
     build_test_text_file(X, Y, number_of_rows, number_of_columns)
 
@@ -189,3 +188,19 @@ def build_test_text_file(X, Y, number_of_rows, number_of_columns):
         if n < number_of_rows - 1:
             file.write("\n")
     file.close()
+
+
+def build_real_data_set(stock_id, price_list, number_of_rows, number_of_columns):
+
+    Y = [0 for row in range(0, len(price_list[0])-1)]
+    X = [[0 for col in range(0, number_of_columns)] for row in range(0, number_of_rows)]
+
+    for row in range(number_of_columns, number_of_rows-number_of_columns+1):
+        X[row][0] = 1
+        for col in range(1, number_of_columns):
+            X[row][col] = int(float(price_list[stock_id][row + col]))
+
+    for row in range(0, len(price_list[0])-1):
+        Y[row] = int(float(price_list[stock_id][row+1]))
+
+    return X, Y
