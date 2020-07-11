@@ -4,8 +4,8 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 
-def get_stock_list_from_excel_files(excel_files_path, processed_file_path, excel_files_list):
 
+def get_stock_list_from_excel_files(excel_files_path, processed_file_path, excel_files_list):
     print("Extracting Stock List from Excel Files. Please Wait...")
 
     stock_list = ["وتجارت"]
@@ -33,7 +33,6 @@ def get_stock_list_from_excel_files(excel_files_path, processed_file_path, excel
 
 
 def get_stock_list_from_processed_file(processed_file_path):
-
     print("Loading Stock List. Please Wait...")
 
     with open(processed_file_path, encoding="utf8") as data:
@@ -48,10 +47,10 @@ def get_stock_list_from_processed_file(processed_file_path):
     return stock_list
 
 
-def build_preliminary_file_of_zeros(file_name, number_of_stocks):
+def build_preliminary_file(file_name, number_of_stocks):
     prices_file = open(file_name, "w")
     for n in range(0, number_of_stocks):
-        prices_file.write("1")
+        prices_file.write("xxx")
         if n < number_of_stocks - 1:
             prices_file.write("\n")
     prices_file.close()
@@ -64,10 +63,10 @@ def get_work_book_info(file_name):
     wb_prices = [0] * (sheet.nrows - 3)
 
     for r in range(3, sheet.nrows):
-       wb_stock_list[r - 3] = re.sub(" ", "_", str(sheet.cell_value(r, 0)))
-       wb_prices[r - 3] = sheet.cell_value(r, 10)
+        wb_stock_list[r - 3] = re.sub(" ", "_", str(sheet.cell_value(r, 0)))
+        wb_prices[r - 3] = sheet.cell_value(r, 10)
 
-    return wb_stock_list,  wb_prices
+    return wb_stock_list, wb_prices
 
 
 def build_prices_file(file_name, name, price):
@@ -76,7 +75,10 @@ def build_prices_file(file_name, name, price):
     with open(file_name) as data:
         for line in data:
             line = line.rstrip("\n")
-            new_line[line_index] = str(line) + "\t" + str(price[line_index])
+            if line == "xxx":
+                new_line[line_index] = str(price[line_index])
+            else:
+                new_line[line_index] = str(line) + "\t" + str(price[line_index])
             line_index += 1
 
     open(file_name, 'w').close()
@@ -90,22 +92,31 @@ def build_prices_file(file_name, name, price):
 
 
 def get_price_list_from_excel_files(stock_list, excel_files_path, price_list_file_path):
-
-    build_preliminary_file_of_zeros(price_list_file_path, len(stock_list))
+    build_preliminary_file(price_list_file_path, len(stock_list))
     excel_files_list = [f for f in listdir(excel_files_path) if isfile(join(excel_files_path, f))]
 
     print("Generating Prices File. Please Wait...")
 
-    price_list = [[0 for x in range(len(excel_files_list) + 1)] for y in range(len(stock_list))]
-    for pr in price_list:
-        pr[0] = 1
+    price_list = [[0 for x in range(len(excel_files_list))] for y in range(len(stock_list))]
+    last_valid_price = [0 for x in range(len(stock_list))]
 
-    excel_file_index = 1
+    excel_file_index = 0
     for excel_file in excel_files_list:
         current_price = [0] * len(stock_list)
         (wb_stocks, wb_prices) = get_work_book_info(excel_files_path + "/" + excel_file)
-        for wbs in wb_stocks:
-            current_price[stock_list.index(wbs)] = wb_prices[wb_stocks.index(wbs)]
+
+        for s in stock_list:
+            if s in wb_stocks:
+                if wb_prices[wb_stocks.index(s)] != 0:
+                    current_price[stock_list.index(s)] = wb_prices[wb_stocks.index(s)]
+                    last_valid_price[stock_list.index(s)] = wb_prices[wb_stocks.index(s)]
+                elif wb_prices[wb_stocks.index(s)] == 0 and last_valid_price[stock_list.index(s)] != 0:
+                    current_price[stock_list.index(s)] = last_valid_price[stock_list.index(s)]
+                elif wb_prices[wb_stocks.index(s)] == 0 and last_valid_price[stock_list.index(s)] == 0:
+                    current_price[stock_list.index(s)] = 0
+            else:
+                current_price[stock_list.index(s)] = last_valid_price[stock_list.index(s)]
+
         temp_stock_index = 0
         for pr in price_list:
             pr[excel_file_index] = current_price[temp_stock_index]
@@ -119,16 +130,15 @@ def get_price_list_from_excel_files(stock_list, excel_files_path, price_list_fil
 
 
 def get_price_list_from_processed_file(processed_file_path, number_of_rows, number_of_columns):
-
     print("Loading Price List. Please Wait...")
 
     with open(processed_file_path, encoding="utf8") as data:
-        price_list = [[0 for x in range(number_of_columns + 1)] for y in range(number_of_rows)]
+        price_list = [[0 for x in range(number_of_columns)] for y in range(number_of_rows)]
         row_index = 0
         for line in data:
             line = re.sub(" ", "_", str(line))
             part = line.split()
-            for col_index in range(0, number_of_columns + 1):
+            for col_index in range(0, number_of_columns):
                 price_list[row_index][col_index] = part[col_index]
             row_index += 1
 
@@ -138,7 +148,6 @@ def get_price_list_from_processed_file(processed_file_path, number_of_rows, numb
 
 
 def normalize_features(X, number_of_rows, number_of_columns):
-
     Z = np.zeros(shape=(number_of_rows, number_of_columns))
 
     Z[:, 0] = X[:, 0]
@@ -147,19 +156,18 @@ def normalize_features(X, number_of_rows, number_of_columns):
 
     return Z
 
-def build_linear_data_set(stock_id, price_list, number_of_rows, number_of_columns):
 
+def build_linear_data_set(stock_id, price_list, number_of_rows, number_of_columns):
     X = [[0 for col in range(0, number_of_columns)] for row in range(0, number_of_rows)]
     Y = [0 for row in range(0, number_of_rows)]
-    # Normal_X = np.zeros(shape=(number_of_rows, number_of_columns))
 
     for row in range(0, number_of_rows):
         X[row][0] = 1
         for col in range(1, number_of_columns):
-            X[row][col] = int(float(price_list[stock_id][row + col]))
+            X[row][col] = int(float(price_list[stock_id][row + col - 1]))
 
     for row in range(0, number_of_rows):
-        Y[row] = int(float(price_list[stock_id][row + number_of_columns]))
+        Y[row] = int(float(price_list[stock_id][row + number_of_columns - 1]))
 
     build_test_text_file(X, Y, number_of_rows, number_of_columns)
 
@@ -172,7 +180,6 @@ def build_linear_data_set(stock_id, price_list, number_of_rows, number_of_column
 
 
 def build_test_text_file(X, Y, number_of_rows, number_of_columns):
-
     file_name = "text_files/test.txt"
     open("text_files/test.txt", 'w').close()
     line_index = 0
@@ -190,17 +197,16 @@ def build_test_text_file(X, Y, number_of_rows, number_of_columns):
     file.close()
 
 
-def build_real_data_set(stock_id, price_list, number_of_rows, number_of_columns):
-
-    Y = [0 for row in range(0, len(price_list[0])-1)]
+def build_real_linear_data_set(stock_id, price_list, number_of_rows, number_of_columns):
+    Y = [0 for row in range(0, number_of_rows)]
     X = [[0 for col in range(0, number_of_columns)] for row in range(0, number_of_rows)]
 
-    for row in range(number_of_columns, number_of_rows-number_of_columns+1):
+    for row in range(number_of_columns - 1, number_of_rows):  # number of columns equals number of features + 1
+        Y[row] = int(float(price_list[stock_id][row]))
+
+    for row in range(number_of_columns - 1, number_of_rows):
         X[row][0] = 1
         for col in range(1, number_of_columns):
-            X[row][col] = int(float(price_list[stock_id][row + col]))
-
-    for row in range(0, len(price_list[0])-1):
-        Y[row] = int(float(price_list[stock_id][row+1]))
+            X[row][col] = int(float(price_list[stock_id][row - number_of_columns + col]))
 
     return X, Y
