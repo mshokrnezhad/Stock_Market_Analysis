@@ -149,12 +149,16 @@ def get_price_list_from_processed_file(processed_file_path, number_of_rows, numb
 
 def normalize_features(X, number_of_rows, number_of_columns):
     Z = np.zeros(shape=(number_of_rows, number_of_columns))
+    mean = [0 for m in range(0, number_of_columns)]
+    std = [0 for m in range(0, number_of_columns)]
 
     Z[:, 0] = X[:, 0]
     for col in range(1, number_of_columns):
-        Z[:, col] = (X[:, col] - np.mean(X, axis=0)[col]) / np.std(X, axis=0, ddof=1)[col]
+        mean[col] = np.mean(X, axis=0)[col]
+        std[col] = np.std(X, axis=0, ddof=1)[col]
+        Z[:, col] = (X[:, col] - mean[col]) / std[col]
 
-    return Z
+    return Z, mean, std
 
 
 def build_linear_data_set(stock_id, price_list, number_of_rows, number_of_columns):
@@ -174,9 +178,9 @@ def build_linear_data_set(stock_id, price_list, number_of_rows, number_of_column
     X = np.array(X)
     Y = np.array(Y)
 
-    Normal_X = normalize_features(X, number_of_rows, number_of_columns)
+    Normal_X, mean, std = normalize_features(X, number_of_rows, number_of_columns)
 
-    return Normal_X, Y
+    return Normal_X, Y, mean, std
 
 
 def build_test_text_file(X, Y, number_of_rows, number_of_columns):
@@ -200,6 +204,7 @@ def build_test_text_file(X, Y, number_of_rows, number_of_columns):
 def build_real_linear_data_set(stock_id, price_list, number_of_rows, number_of_columns):
     Y = [0 for row in range(0, number_of_rows)]
     X = [[0 for col in range(0, number_of_columns)] for row in range(0, number_of_rows)]
+    X_next_day = [1 for col in range(0, number_of_columns)]
 
     for row in range(number_of_columns - 1, number_of_rows):  # number of columns equals number of features + 1
         Y[row] = int(float(price_list[stock_id][row]))
@@ -209,4 +214,7 @@ def build_real_linear_data_set(stock_id, price_list, number_of_rows, number_of_c
         for col in range(1, number_of_columns):
             X[row][col] = int(float(price_list[stock_id][row - number_of_columns + col]))
 
-    return X, Y
+    for col in range(1, number_of_columns):
+        X_next_day[col] = int(float(price_list[stock_id][number_of_rows - number_of_columns + col]))
+
+    return X, Y, X_next_day
