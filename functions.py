@@ -3,6 +3,7 @@ import xlrd
 from os import listdir
 from os.path import isfile, join
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def get_stock_list_from_excel_files(excel_files_path, processed_file_path, excel_files_list):
@@ -33,7 +34,7 @@ def get_stock_list_from_excel_files(excel_files_path, processed_file_path, excel
 
 
 def get_stock_list_from_processed_file(processed_file_path):
-    print("Loading Stock List. Please Wait...")
+    #print("Loading Stock List. Please Wait...")
 
     with open(processed_file_path, encoding="utf8") as data:
         stock_list = []
@@ -42,7 +43,7 @@ def get_stock_list_from_processed_file(processed_file_path):
             part = line.split()
             stock_list.append(str(part[0]))
 
-    print("Done!")
+    #print("Done!")
 
     return stock_list
 
@@ -130,7 +131,7 @@ def get_price_list_from_excel_files(stock_list, excel_files_path, price_list_fil
 
 
 def get_price_list_from_processed_file(processed_file_path, number_of_rows, number_of_columns):
-    print("Loading Price List. Please Wait...")
+    #print("Loading Price List. Please Wait...")
 
     with open(processed_file_path, encoding="utf8") as data:
         price_list = [[0 for x in range(number_of_columns)] for y in range(number_of_rows)]
@@ -142,7 +143,7 @@ def get_price_list_from_processed_file(processed_file_path, number_of_rows, numb
                 price_list[row_index][col_index] = part[col_index]
             row_index += 1
 
-    print("Done!")
+    #print("Done!")
 
     return price_list
 
@@ -161,29 +162,75 @@ def normalize_features(X, number_of_rows, number_of_columns):
     return Z, mean, std
 
 
-def build_linear_data_set(stock_id, price_list, number_of_rows, number_of_columns):
-    X = [[0 for col in range(0, number_of_columns)] for row in range(0, number_of_rows)]
-    Y = [0 for row in range(0, number_of_rows)]
+def linear_regression_NE(stock_id, price_list, number_of_training_rows, number_of_feature_columns,
+                         number_of_dataset_rows, processed_excel_files_list):
 
-    for row in range(0, number_of_rows):
-        X[row][0] = 1
-        for col in range(1, number_of_columns):
-            X[row][col] = int(float(price_list[stock_id][row + col - 1]))
+    print("\n" + "Linear Regression is ON!")
 
-    for row in range(0, number_of_rows):
-        Y[row] = int(float(price_list[stock_id][row + number_of_columns - 1]))
+    training_X = [[0 for col in range(0, number_of_feature_columns)] for row in range(0, number_of_training_rows)]
+    training_Y = [0 for row in range(0, number_of_training_rows)]
+    for row in range(0, number_of_training_rows):
+        training_X[row][0] = 1
+        for col in range(1, number_of_feature_columns):
+            training_X[row][col] = int(float(price_list[stock_id][row + col - 1]))
+    for row in range(0, number_of_training_rows):
+        training_Y[row] = int(float(price_list[stock_id][row + number_of_feature_columns - 1]))
 
-    build_test_text_file(X, Y, number_of_rows, number_of_columns)
+    build_octave_test_text_file(training_X, training_Y, number_of_training_rows, number_of_feature_columns)
 
-    X = np.array(X)
-    Y = np.array(Y)
+    training_X = np.array(training_X)
+    training_Y = np.array(training_Y)
 
-    Normal_X, mean, std = normalize_features(X, number_of_rows, number_of_columns)
+    normal_training_X, mean, std = normalize_features(training_X, number_of_training_rows, number_of_feature_columns)
 
-    return Normal_X, Y, mean, std
+    theta = np.matmul(np.matmul(np.linalg.pinv(np.matmul(normal_training_X.transpose(), normal_training_X)),
+                                normal_training_X.transpose()), training_Y)
+
+    training_predicted_Y = np.matmul(normal_training_X, theta)
+
+    print("MSE on training set: " + str(mean_squared_error(training_predicted_Y, training_Y)))
+    print("MAE on training set: " + str(mean_absolute_error(training_predicted_Y, training_Y)))
+    # diagram_plot(processed_excel_files_list, training_Y, training_predicted_Y, 0)
+
+    validation_Y = [0 for row in range(0, number_of_dataset_rows - (number_of_training_rows + number_of_feature_columns - 1))]
+    validation_X = [[0 for col in range(0, number_of_feature_columns)] for row in
+                    range(0, number_of_dataset_rows - (number_of_training_rows + number_of_feature_columns - 1))]
+    normal_validation_X = np.zeros(shape=(number_of_dataset_rows - (number_of_training_rows + number_of_feature_columns - 1),
+                                          number_of_feature_columns))
+    X_next_day = [1 for col in range(0, number_of_feature_columns)]
+    normal_X_next_day = [1 for col in range(0, number_of_feature_columns)]
+
+    for row in range(0, len(validation_Y)):
+        validation_Y[row] = int(float(price_list[stock_id][number_of_training_rows + number_of_feature_columns - 1 + row]))
+    for row in range(0, len(validation_X)):
+        validation_X[row][0] = 1
+        for col in range(1, number_of_feature_columns):
+            validation_X[row][col] = int(float(price_list[stock_id][row + number_of_training_rows + number_of_feature_columns
+                                                                    - 1 - number_of_feature_columns + col]))
+    for col in range(1, number_of_feature_columns):
+        X_next_day[col] = int(float(price_list[stock_id][number_of_dataset_rows - number_of_feature_columns + col]))
+        normal_X_next_day[col] = (X_next_day[col] - mean[col]) / std[col]
+
+    validation_X = np.array(validation_X)
+    validation_Y = np.array(validation_Y)
+
+    normal_validation_X[:, 0] = validation_X[:, 0]
+    for col in range(1, number_of_feature_columns):
+        normal_validation_X[:, col] = (validation_X[:, col] - mean[col]) / std[col]
+
+    validation_predicted_Y = np.matmul(normal_validation_X, theta)
+
+    print("MSE on validation set: " + str(mean_squared_error(validation_predicted_Y, validation_Y)))
+    print("MAE on validation set: " + str(mean_absolute_error(validation_predicted_Y, validation_Y)))
+
+    # diagram_plot(processed_excel_files_list, validation_Y, validation_predicted_Y, number_of_training_rows +
+    #              number_of_feature_columns - 1)
+
+    prediction_next_day = np.matmul(normal_X_next_day, theta)
+    print("Expected price of next day: " + str(prediction_next_day))
 
 
-def build_test_text_file(X, Y, number_of_rows, number_of_columns):
+def build_octave_test_text_file(X, Y, number_of_rows, number_of_columns):
     file_name = "text_files/test.txt"
     open("text_files/test.txt", 'w').close()
     line_index = 0
@@ -201,20 +248,36 @@ def build_test_text_file(X, Y, number_of_rows, number_of_columns):
     file.close()
 
 
-def build_real_linear_data_set(stock_id, price_list, number_of_rows, number_of_columns):
-    Y = [0 for row in range(0, number_of_rows)]
-    X = [[0 for col in range(0, number_of_columns)] for row in range(0, number_of_rows)]
-    X_next_day = [1 for col in range(0, number_of_columns)]
+def mean_squared_error(predicted_Y, Y):
+    return np.dot((predicted_Y - Y), (predicted_Y - Y))\
+           /(2 * len(Y))
 
-    for row in range(number_of_columns - 1, number_of_rows):  # number of columns equals number of features + 1
-        Y[row] = int(float(price_list[stock_id][row]))
 
-    for row in range(number_of_columns - 1, number_of_rows):
-        X[row][0] = 1
-        for col in range(1, number_of_columns):
-            X[row][col] = int(float(price_list[stock_id][row - number_of_columns + col]))
+def mean_absolute_error(predicted_Y, Y):
+    return np.sum(np.abs(predicted_Y - Y))/(2 * len(Y))
 
-    for col in range(1, number_of_columns):
-        X_next_day[col] = int(float(price_list[stock_id][number_of_rows - number_of_columns + col]))
 
-    return X, Y, X_next_day
+def excel_files_list_processor(excel_files_path, number_of_data_sets):
+    excel_files_list = [f for f in listdir(excel_files_path) if isfile(join(excel_files_path, f))]
+    label = np.arange(0, number_of_data_sets, 1)
+    processed_excel_files_list = [""] * len(label)
+
+    for fn_index in range(0, len(label)):
+        processed_excel_files_list[fn_index] = excel_files_list[label[fn_index]]
+    for fn in range(0, len(processed_excel_files_list)):
+        processed_excel_files_list[fn] = re.sub('.xlsx', "", re.sub('_', "", re.sub('MarketWatchPlus-13', "",
+                                                                                    processed_excel_files_list[fn])))
+
+    return excel_files_list, processed_excel_files_list
+
+
+def diagram_plot(processed_excel_files_list, Y, predicted_Y, label_index):
+
+    processed_excel_files_list = np.array(processed_excel_files_list)
+    temp_excel_file_list =np.split(processed_excel_files_list, [label_index, len(Y)+label_index])[1]
+
+    label = np.arange(label_index, label_index + len(Y), 1)
+    plt.plot(label, Y, 'r--', label, predicted_Y, 'b*')
+    plt.xticks(label, temp_excel_file_list, rotation='vertical')
+    plt.grid()
+    plt.show()
