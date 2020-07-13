@@ -161,6 +161,8 @@ def normalize_features(X, number_of_rows, number_of_columns):
     for col in range(1, number_of_columns):
         mean[col] = np.mean(X, axis=0)[col]
         std[col] = np.std(X, axis=0, ddof=1)[col]
+        if std[col] == 0:
+            std[col] = 1
         Z[:, col] = (X[:, col] - mean[col]) / std[col]
 
     return Z, mean, std
@@ -168,9 +170,10 @@ def normalize_features(X, number_of_rows, number_of_columns):
 
 def linear_regression_NE(stock_id, price_list, number_of_training_rows, number_of_feature_columns,
                          number_of_dataset_rows, processed_excel_files_list, prediction_day, regularization,
-                         training_plot, validation_plot, test_plot):
+                         demonstration):
 
-    print("\n" + "Linear Regression is ON!")
+    if demonstration == "ON":
+        print("\n" + "Linear Regression is ON!")
 
     # training phase
     training_X = [[0 for col in range(0, number_of_feature_columns)] for row in range(0, number_of_training_rows)]
@@ -198,9 +201,9 @@ def linear_regression_NE(stock_id, price_list, number_of_training_rows, number_o
 
     training_predicted_Y = np.matmul(normal_training_X, theta)
 
-    print("MSE on training set: " + str(mean_squared_error(training_predicted_Y, training_Y)))
-    print("MAE on training set: " + str(mean_absolute_error(training_predicted_Y, training_Y)))
-    if training_plot == "ON":
+    if demonstration == "ON":
+        print("MSE on training set: " + str(mean_squared_error(training_predicted_Y, training_Y)))
+        print("MAE on training set: " + str(mean_absolute_error(training_predicted_Y, training_Y)))
         training_diagram(processed_excel_files_list, training_Y, training_predicted_Y, 0, 0)
 
     # validation phase
@@ -229,12 +232,11 @@ def linear_regression_NE(stock_id, price_list, number_of_training_rows, number_o
 
     validation_predicted_Y = np.matmul(normal_validation_X, theta)
 
-    print("MSE on validation set: " + str(mean_squared_error(validation_predicted_Y, validation_Y)))
-    print("MAE on validation set: " + str(mean_absolute_error(validation_predicted_Y, validation_Y)))
-
-    if validation_plot == "ON":
+    if demonstration == "ON":
+        print("MSE on validation set: " + str(mean_squared_error(validation_predicted_Y, validation_Y)))
+        print("MAE on validation set: " + str(mean_absolute_error(validation_predicted_Y, validation_Y)))
         training_diagram(processed_excel_files_list, validation_Y, validation_predicted_Y, number_of_training_rows +
-                 number_of_feature_columns - 1, 0)
+                     number_of_feature_columns - 1, 0)
 
     # test phase
     if prediction_day > 0:
@@ -253,10 +255,11 @@ def linear_regression_NE(stock_id, price_list, number_of_training_rows, number_o
             X_next_day[number_of_feature_columns-1] = price_next_day[pd]
             X_next_day[0] = 1
 
-        print("Expected price of next day: " + str(price_next_day[0]))
-
-        if test_plot == "ON":
+        if demonstration == "ON":
+            print("Expected price of next day: " + str(price_next_day[0]))
             prediction_diagram(price_next_day, price_list[stock_id][number_of_dataset_rows-1])
+
+    return price_next_day, price_list[stock_id][number_of_dataset_rows-1]
 
 
 def build_octave_test_text_file(X, Y, number_of_rows, number_of_columns):
