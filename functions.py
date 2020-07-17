@@ -5,6 +5,8 @@ from os.path import isfile, join
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from tqdm import tqdm
+import time
 
 
 def get_stock_list_from_excel_files(excel_files_path, processed_file_path, excel_files_list):
@@ -168,7 +170,7 @@ def normalize_features(X, number_of_rows, number_of_columns):
     return Z, mean, std
 
 
-def linear_regression_NE(stock_id, price_list, number_of_training_rows, number_of_feature_columns,
+def LRNE(stock_id, price_list, number_of_training_rows, number_of_feature_columns,
                          number_of_dataset_rows, processed_excel_files_list, prediction_day, regularization,
                          demonstration):
 
@@ -289,7 +291,7 @@ def mean_absolute_error(predicted_Y, Y):
     return np.sum(np.abs(predicted_Y - Y))/(2 * len(Y))
 
 
-def excel_files_list_processor(excel_files_path, number_of_data_sets):
+def process_excel_files_list(excel_files_path, number_of_data_sets):
     excel_files_list = [f for f in listdir(excel_files_path) if isfile(join(excel_files_path, f))]
     label = np.arange(0, number_of_data_sets, 1)
     processed_excel_files_list = [""] * len(label)
@@ -335,3 +337,52 @@ def prediction_diagram(price_next_day, price):
     ax = plt.gca()
     ax.grid(axis='both', which='both')
     plt.show()
+
+
+def CL(string, length): # add spaces at the end of given string to make its length equal to the given length
+    if len(string) < length:
+        for i in range(length-len(string)):
+            string = string + " "
+    return string
+
+
+def ANALYZE_MY_STOCKS(sl, msfp, msenfp, pl, ntds, ntf, nds, pefl, msafp, ntd):
+    print("\n" + "Analysing My Current Stocks")
+    pnd = [[0 for pd in range(ntd)] for si in range(len(sl))] # pnd: next_day_prices
+    ndp = [[0. for pd in range(ntd)] for si in range(len(sl))] # pnd: next_day_percentages
+    cp = [0 for si in range(len(sl))] # cp: current_price
+
+    my_stocks = get_stock_list_from_processed_file(msfp)
+    print(my_stocks)
+    my_stocks_en = get_stock_list_from_processed_file(msenfp)
+    for sn in my_stocks:
+    #for sn in tqdm(my_stocks, desc="Loading…", ascii=False, ncols=75):
+        si = np.where(np.array(my_stocks) == sn)[0][0] # si: stock_index
+        (pnd[si], cp[si]) = LRNE(si, pl, ntds, ntf, nds, pefl, ntd, 5, "OFF")
+        #print(price_next_day)
+        for pd in range(ntd):
+            temp1 = int(float(pnd[si][pd]))
+            temp2 = int(float(cp[si]))
+            temp3 = temp1 - temp2
+            temp3 = temp3 / temp1
+            temp3 = temp3 * 100
+            ndp[si][pd] = math.ceil(temp3 * 100) / 100
+
+    open(msafp, 'w').close()
+    ms_analysis_file = open(msafp, "w")
+    ms_analysis_file.write("------------------------------------------------------------------------" + "\n")
+    ms_analysis_file.write("|NAME           |1 DAY     |7 DAY     |1 Month   |2 Month   |3 Month   |" + "\n")
+    ms_analysis_file.write("------------------------------------------------------------------------" + "\n")
+    for sn in my_stocks:
+        si = np.where(np.array(my_stocks) == sn)[0][0]
+        ms_analysis_file.write("|" + CL(my_stocks_en[si], 15)
+                               + "|" + CL(str(ndp[si][0]), 10)
+                               + "|" + CL(str(ndp[si][6]), 10)
+                               + "|" + CL(str(ndp[si][29]), 10)
+                               + "|" + CL(str(ndp[si][59]), 10)
+                               + "|" + CL(str(ndp[si][89]), 10) + "\n")
+        ms_analysis_file.write("------------------------------------------------------------------------" + "\n")
+    ms_analysis_file.close()
+
+    time.sleep(0.5)
+    print("Analysis File is Built.")
