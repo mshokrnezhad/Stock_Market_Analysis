@@ -6,20 +6,20 @@ msfp = "text_files/my_stocks.txt" # my_stocks_file_path
 msenfp = "text_files/my_stocks_en.txt" # my_stocks_en_file_path
 msafp = "text_files/my_stocks_analysis.txt" # my_stocks_analysis_file_path
 plfp = "text_files/price_list.txt" # price_list_file_path
-
 nds = 311 # number_of_data_sets
 ntds = 200 # number_of_training_sets
-ntf = 91 # number_of_training_features. 1 + number of days we want to use their price as the training features
+ntf = 91 # number_of_training_features, 1 + number of days we want to use their price as the training features
 
 print("Dataset size: " + str(nds))
 print("Training set size: " + str(ntds))
 print("Feature set size: " + str(ntf))
 
-(efl, pefl) = process_excel_files_list(efp, nds) # efl: excel_files_list, pefl: processed_excel_files_list
-# sl = get_stock_list_from_excel_files(efp, slfp, efl) # sl: stock_list
-sl = get_stock_list_from_processed_file(slfp) # sl: stock_list
-# pl = get_price_list_from_excel_files(sl, efp, plfp) # pl: price_list
-pl = get_price_list_from_processed_file(plfp, len(sl), nds) # pl: price_list
+(efl, pefl) = PROCESS_EXCEL_FILES_LIST(efp, nds) # efl: excel_files_list, pefl: processed_excel_files_list
+# sl = GET_STOCK_LIST_FROM_EXCEL_FILES(efp, slfp, efl) # sl: stock_list
+sl = GET_STOCK_LIST_FROM_PROCESSED_FILE(slfp) # sl: stock_list
+ns = len(sl) # ns: number of stocks
+# pl = GET_PRICE_LIST_FROM_EXCEL_FILES(sl, efp, plfp) # pl: price_list
+pl = GET_PRICE_LIST_FROM_PROCESSED_FILE(plfp, ns, nds) # pl: price_list
 
 # analysing my stocks
 ntd = 90 # number of days you need to predict the prices and percentages
