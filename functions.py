@@ -143,70 +143,10 @@ def NORMALIZE_FEATURES(X, ntds, ntf):
         nX[:, c] = (X[:, c] - mean[c]) / std[c]
     return nX, mean, std
 
-def LEARN_BY_NELR(si, pl, ntds, ntf, nds, pefl, ntd, reg, demo): # NELR: NORMAL_EQUATION_based_LINEAR_REGRESSION
-    if demo == "ON":
-        print("\n" + "Linear Regression is ON!")
-    # building training data
-    rm = np.zeros((ntf, ntf), float) # rm: regularization_matrix
-    np.fill_diagonal(rm, reg)
-    rm[0][0] = 0
-    tX = [[0 for c in range(0, ntf)] for row in range(0, ntds)] # tX: training_X
-    tY = [0 for r in range(0, ntds)] # tY: training_Y
-    for r in range(0, ntds): # r: row
-        tX[r][0] = 1
-        for c in range(1, ntf): # c: column
-            tX[r][c] = int(float(pl[si][r + c - 1]))
-    for r in range(0, ntds): # r: row
-        tY[r] = int(float(pl[si][r + ntf - 1]))
-    BUILD_OCTAVE_TEST_FILE(tX, tY, ntds, ntf)
-    tX = np.array(tX)
-    tY = np.array(tY)
-    ntX, mean, std = NORMALIZE_FEATURES(tX, ntds, ntf) # ntX: normalized_training_X
-    # calculating learning coefficients
-    temp1 = np.matmul(ntX.transpose(), ntX)
-    temp2 = np.matmul(np.linalg.pinv(temp1 + rm), ntX.transpose())
-    theta = np.matmul(temp2, tY)
-    # generating predicted Y for training data
-    tpY = np.matmul(ntX, theta) # tpY: training_predicted_Y
-    # demonstrating training phase
-    if demo == "ON":
-        print("MSE on training set: " + str(MSE(tpY, tY)))
-        print("MAE on training set: " + str(MAE(tpY, tY)))
-        PLOT_DIAGRAM(pefl, tY, tpY, 0, 0)
 
 
 
 
-
-
-
-
-
-
-
-
-    # test phase
-    if prediction_day > 0:
-        price_next_day = [0 for row in range(0, prediction_day)]
-        X_next_day = [1 for col in range(0, number_of_feature_columns)]
-        normal_X_next_day = [1 for col in range(0, number_of_feature_columns)]
-        for col in range(1, number_of_feature_columns):
-            X_next_day[col] = int(float(price_list[stock_id][number_of_dataset_rows - number_of_feature_columns + col]))
-
-        for pd in range(0, prediction_day):
-            for col in range(1, number_of_feature_columns):
-                normal_X_next_day[col] = (X_next_day[col] - mean[col]) / std[col]
-            price_next_day[pd] = math.ceil(np.matmul(normal_X_next_day, theta))
-
-            X_next_day = np.roll(X_next_day, -1)
-            X_next_day[number_of_feature_columns-1] = price_next_day[pd]
-            X_next_day[0] = 1
-
-        if demonstration == "ON":
-            print("Expected price of next day: " + str(price_next_day[0]))
-            prediction_diagram(price_next_day, price_list[stock_id][number_of_dataset_rows-1])
-
-    return price_next_day, price_list[stock_id][number_of_dataset_rows-1]
 
 
 def BUILD_OCTAVE_TEST_FILE(X, Y, number_of_rows, number_of_columns):
@@ -288,6 +228,14 @@ def CL(string, length): # add spaces at the end of given string to make its leng
     return string
 
 
+
+
+
+
+
+
+
+
 def ANALYZE_MY_STOCKS(sl, msfp, msenfp, pl, ntds, ntf, nds, pefl, msafp, ntd):
     print("\n" + "Analysing My Current Stocks")
     next_day_prices = [[0 for pd in range(ntd)] for si in range(len(sl))]
@@ -329,6 +277,72 @@ def ANALYZE_MY_STOCKS(sl, msfp, msenfp, pl, ntds, ntf, nds, pefl, msafp, ntd):
 
     time.sleep(0.5)
     print("Analysis File is Built.")
+
+
+def LEARN_BY_NELR(si, pl, ntds, ntf, nds, pefl, ntd, reg, demo): # NELR: NORMAL_EQUATION_based_LINEAR_REGRESSION
+    if demo == "ON":
+        print("\n" + "Linear Regression is ON!")
+    # building training data
+    rm = np.zeros((ntf, ntf), float) # rm: regularization_matrix
+    np.fill_diagonal(rm, reg)
+    rm[0][0] = 0
+    tX = [[0 for c in range(0, ntf)] for row in range(0, ntds)] # tX: training_X
+    tY = [0 for r in range(0, ntds)] # tY: training_Y
+    for r in range(0, ntds): # r: row
+        tX[r][0] = 1
+        for c in range(1, ntf): # c: column
+            tX[r][c] = int(float(pl[si][r + c - 1]))
+    for r in range(0, ntds): # r: row
+        tY[r] = int(float(pl[si][r + ntf - 1]))
+    BUILD_OCTAVE_TEST_FILE(tX, tY, ntds, ntf)
+    tX = np.array(tX)
+    tY = np.array(tY)
+    ntX, mean, std = NORMALIZE_FEATURES(tX, ntds, ntf) # ntX: normalized_training_X
+    # calculating learning coefficients
+    temp1 = np.matmul(ntX.transpose(), ntX)
+    temp2 = np.matmul(np.linalg.pinv(temp1 + rm), ntX.transpose())
+    theta = np.matmul(temp2, tY)
+    # generating predicted Y for training data
+    tpY = np.matmul(ntX, theta) # tpY: training_predicted_Y
+    # demonstrating training phase
+    if demo == "ON":
+        print("MSE on training set: " + str(MSE(tpY, tY)))
+        print("MAE on training set: " + str(MAE(tpY, tY)))
+        PLOT_DIAGRAM(pefl, tY, tpY, 0, 0)
+
+
+
+
+
+
+
+
+
+
+
+
+    # test phase
+    if prediction_day > 0:
+        price_next_day = [0 for row in range(0, prediction_day)]
+        X_next_day = [1 for col in range(0, number_of_feature_columns)]
+        normal_X_next_day = [1 for col in range(0, number_of_feature_columns)]
+        for col in range(1, number_of_feature_columns):
+            X_next_day[col] = int(float(price_list[stock_id][number_of_dataset_rows - number_of_feature_columns + col]))
+
+        for pd in range(0, prediction_day):
+            for col in range(1, number_of_feature_columns):
+                normal_X_next_day[col] = (X_next_day[col] - mean[col]) / std[col]
+            price_next_day[pd] = math.ceil(np.matmul(normal_X_next_day, theta))
+
+            X_next_day = np.roll(X_next_day, -1)
+            X_next_day[number_of_feature_columns-1] = price_next_day[pd]
+            X_next_day[0] = 1
+
+        if demonstration == "ON":
+            print("Expected price of next day: " + str(price_next_day[0]))
+            prediction_diagram(price_next_day, price_list[stock_id][number_of_dataset_rows-1])
+
+    return price_next_day, price_list[stock_id][number_of_dataset_rows-1]
 
 
 def VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, stock_id, mean, std, theta, demonstration): # DBD: day by day
