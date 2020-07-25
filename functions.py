@@ -12,25 +12,25 @@ def GET_STOCK_LIST_FROM_EXCEL_FILES(efp, slfp, efl):
     print("Extracting Stock List from Excel Files. Please Wait...")
     # generating stock list
     sl = ["وتجارت"]
-    file_index = 0
-    for excel_file in efl:
-        print("Precessing " + str(file_index + 1) + "/" + str(len(efl)) + " files")
-        file_index += 1
-        excel_sheet = xlrd.open_workbook(efp + "/" + excel_file).sheet_by_index(0)
-        work_book = [""] * (excel_sheet.nrows - 3)
-        for row in range(3, excel_sheet.nrows):
-            work_book[row - 3] = str(excel_sheet.cell_value(row, 0))
-        for stock_name in work_book:
-            if stock_name not in sl:
-                sl.append(stock_name)
+    fi = 0 # fi: file_index
+    for ef in efl: # ef: excel_file
+        print("Precessing " + str(fi + 1) + "/" + str(len(efl)) + " files")
+        fi += 1
+        es = xlrd.open_workbook(efp + "/" + ef).sheet_by_index(0) # es: excel_sheet
+        wb = [""] * (es.nrows - 3) # wb: workbook
+        for row in range(3, es.nrows):
+            wb[row - 3] = str(es.cell_value(row, 0))
+        for sn in wb: # sn: stock_name
+            if sn not in sl:
+                sl.append(sn)
     # writing stock list into file
     open(slfp, 'w').close()
-    stock_list_file = open(slfp, "w", encoding="utf8")
-    for stock_name_index in range(0, len(sl)):
-        stock_list_file.write(sl[stock_name_index])
-        if stock_name < len(sl) - 1:
-            stock_list_file.write("\n")
-    stock_list_file.close()
+    slf = open(slfp, "w", encoding="utf8") # slf: stock_list_file
+    for sni in range(0, len(sl)): # sni: stock_name_index
+        slf.write(sl[sni])
+        if sni < len(sl) - 1:
+            slf.write("\n")
+    slf.close()
     print("Done!")
     return sl
 
@@ -38,142 +38,150 @@ def GET_STOCK_LIST_FROM_PROCESSED_FILE(slfp):
     #print("Loading Stock List. Please Wait...")
     # reading processed file
     with open(slfp, encoding="utf8") as data:
-        stock_list = []
-        for line in data:
-            line = re.sub(" ", "_", str(line))
-            part = line.split()
-            stock_list.append(str(part[0]))
+        sl = [] #sl: stock_list
+        for l in data: # l: line
+            l = re.sub(" ", "_", str(l))
+            sl.append(str(l.split()[0]))
     #print("Done!")
-    return stock_list
+    return sl
 
-def BUILD_PRELIMINARY_FILE(file_name, number_of_rows):
-    file = open(file_name, "w")
-    for row in range(0, number_of_rows):
-        file.write("xxx")
-        if row < number_of_rows - 1:
-            file.write("\n")
-    file.close()
+def BUILD_PRELIMINARY_FILE(fn, nr):
+    f = open(fn, "w") # f: file
+    for r in range(0, nr): # r: row
+        f.write("xxx")
+        if r < nr - 1:
+            f.write("\n")
+    f.close()
 
-def GET_WORK_BOOK_INFO(file_name):
-    excel_file = xlrd.open_workbook(file_name)
-    sheet = excel_file.sheet_by_index(0)
-    wb_stocks = [""] * (sheet.nrows - 3)
-    wb_prices = [0] * (sheet.nrows - 3)
+def GET_WORK_BOOK_INFO(fn):
+    ef = xlrd.open_workbook(fn) # ef: excel_file
+    s = ef.sheet_by_index(0) # s: sheet
+    wbs = [""] * (s.nrows - 3) # wbs: wb_stocks
+    wbp = [0] * (s.nrows - 3) # wbp: wb_prices
     # reading stock names and prices
-    for r in range(3, sheet.nrows):
-        wb_stocks[r - 3] = re.sub(" ", "_", str(sheet.cell_value(r, 0)))
-        wb_prices[r - 3] = sheet.cell_value(r, 10)
-    return wb_stocks, wb_prices
+    for r in range(3, s.nrows): # r: row
+        wbs[r - 3] = re.sub(" ", "_", str(s.cell_value(r, 0)))
+        wbp[r - 3] = s.cell_value(r, 10)
+    return wbs, wbp
 
-def BUILD_PRICES_FILE(file_name, name, price):
-    line_index = 0
-    new_line = [""] * len(name)
+def BUILD_PRICES_FILE(fn, n, p):
+    li = 0 # li: line_index
+    nl = [""] * len(n) # nl: new_line
     # generating lines
-    with open(file_name) as data:
-        for line in data:
-            line = line.rstrip("\n")
-            if line == "xxx":
-                new_line[line_index] = str(price[line_index])
+    with open(fn) as data:
+        for l in data: # l: line
+            l = l.rstrip("\n")
+            if l == "xxx":
+                nl[li] = str(p[li])
             else:
-                new_line[line_index] = str(line) + "\t" + str(price[line_index])
-            line_index += 1
+                nl[li] = str(l) + "\t" + str(p[li])
+            li += 1
     # writing lines
-    open(file_name, 'w').close()
-    prices_file = open(file_name, "w")
-    for stock_name_index in range(0, len(name)):
-        prices_file.write(new_line[stock_name_index])
-        if stock_name_index < len(name) - 1:
-            prices_file.write("\n")
-    prices_file.close()
+    open(fn, 'w').close()
+    pf = open(fn, "w") # pf: prices_file
+    for sni in range(0, len(n)): # sni: stock_name_index
+        pf.write(nl[sni])
+        if sni < len(n) - 1:
+            pf.write("\n")
+    pf.close()
 
 def GET_PRICE_LIST_FROM_EXCEL_FILES(sl, efp, plfp):
     print("Generating Prices File. Please Wait...")
-    excel_files_list = [f for f in listdir(efp) if isfile(join(efp, f))]
-    price_list = [[0 for x in range(len(excel_files_list))] for y in range(len(sl))]
-    last_valid_price = [0 for x in range(len(sl))]
+    efl = [f for f in listdir(efp) if isfile(join(efp, f))] # efl: excel_files_list
+    pl = [[0 for x in range(len(efl))] for y in range(len(sl))] # pl: price_list
+    lvp = [0 for x in range(len(sl))] # lvp: last_valid_price
     BUILD_PRELIMINARY_FILE(plfp, len(sl))
     # generating price list
-    excel_file_index = 0
-    for excel_file in tqdm(excel_files_list, desc="Loading…", ascii=False, ncols=75):
-        current_price = [0] * len(sl)
-        (wb_stocks, wb_prices) = GET_WORK_BOOK_INFO(efp + "/" + excel_file)
-        for stock_name in sl:
-            if stock_name in wb_stocks:
-                if wb_prices[wb_stocks.index(stock_name)] != 0:
-                    current_price[sl.index(stock_name)] = wb_prices[wb_stocks.index(stock_name)]
-                    last_valid_price[sl.index(stock_name)] = wb_prices[wb_stocks.index(stock_name)]
-                elif wb_prices[wb_stocks.index(stock_name)] == 0 and last_valid_price[sl.index(stock_name)] != 0:
-                    current_price[sl.index(stock_name)] = last_valid_price[sl.index(stock_name)]
-                elif wb_prices[wb_stocks.index(stock_name)] == 0 and last_valid_price[sl.index(stock_name)] == 0:
-                    current_price[sl.index(stock_name)] = 0
+    efi = 0 # efi: excel_file_index
+    for ef in tqdm(efi, desc="Loading…", ascii=False, ncols=75): # ef: excel_file
+        cp = [0] * len(sl) # cp: current_price
+        (wbs, wbp) = GET_WORK_BOOK_INFO(efp + "/" + ef) # wbs: wb_stocks, wbp: wb_prices
+        for sn in sl: # sn: stock_name
+            if sn in wbs:
+                if wbp[wbs.index(sn)] != 0:
+                    cp[sl.index(sn)] = wbp[wbs.index(sn)]
+                    lvp[sl.index(sn)] = wbp[wbs.index(sn)]
+                elif wbp[wbs.index(sn)] == 0 and lvp[sl.index(sn)] != 0:
+                    cp[sl.index(sn)] = lvp[sl.index(sn)]
+                elif wbp[wbs.index(sn)] == 0 and lvp[sl.index(sn)] == 0:
+                    cp[sl.index(sn)] = 0
             else:
-                current_price[sl.index(stock_name)] = last_valid_price[sl.index(stock_name)]
-        temp_stock_index = 0
-        for stock_price in price_list:
-            stock_price[excel_file_index] = current_price[temp_stock_index]
-            temp_stock_index += 1
-        excel_file_index += 1
-        BUILD_PRICES_FILE(plfp, sl, current_price)
+                cp[sl.index(sn)] = lvp[sl.index(sn)]
+        tsi = 0 # tsi: temp_stock_index
+        for sp in pl: # sp: stock_price
+            sp[efi] = cp[tsi]
+            tsi += 1
+        efi += 1
+        BUILD_PRICES_FILE(plfp, sl, cp)
     print("Done!")
-    return price_list
+    return pl
 
 def GET_PRICE_LIST_FROM_PROCESSED_FILE(plfp, ns, nds):
     #print("Loading Price List. Please Wait...")
     with open(plfp, encoding="utf8") as data:
-        price_list = [[0 for x in range(nds)] for y in range(ns)]
-        stock_name_index = 0
-        for line in data:
-            line = re.sub(" ", "_", str(line))
-            part = line.split()
-            for data_set_index in range(0, nds):
-                price_list[stock_name_index][data_set_index] = part[data_set_index]
-            stock_name_index += 1
+        pl = [[0 for x in range(nds)] for y in range(ns)] # pl: price_list
+        sni = 0 # sni:stock_name_index
+        for l in data: # l: line
+            l = re.sub(" ", "_", str(l))
+            for dsi in range(0, nds): # dsi: data_set_index
+                pl[sni][dsi] = l.split()[dsi]
+            sni += 1
     #print("Done!")
-    return price_list
+    return pl
 
-def NORMALIZE_FEATURES(X, number_of_rows, number_of_columns, m, s):
-    normal_X = np.zeros(shape=(number_of_rows, number_of_columns))
-    mean = [0 for m in range(0, number_of_columns)]
-    std = [0 for m in range(0, number_of_columns)]
-    normal_X[:, 0] = X[:, 0]
-    for col in range(1, number_of_columns):
-        mean[col] = np.mean(X, axis=0)[col]
-        std[col] = np.std(X, axis=0, ddof=1)[col]
-        if std[col] == 0:
-            std[col] = 1
-        normal_X[:, col] = (X[:, col] - mean[col]) / std[col]
-    return normal_X, mean, std
+def NORMALIZE_FEATURES(X, ntds, ntf):
+    nX = np.zeros(shape=(ntds, ntf)) # nX: normalized_X
+    mean = [0 for c in range(0, ntf)]
+    std = [0 for c in range(0, ntf)]
+    nX[:, 0] = X[:, 0]
+    # normalizing X using STD and MEAN
+    for c in range(1, ntf): # c: column
+        mean[c] = np.mean(X, axis=0)[c]
+        std[c] = np.std(X, axis=0, ddof=1)[c]
+        if std[c] == 0:
+            std[c] = 1
+        nX[:, c] = (X[:, c] - mean[c]) / std[c]
+    return nX, mean, std
 
-def LINEAR_REGRESSION_USING_NORMAL_EQUATION(stock_id, pl, ntds, ntf, nds, pefl, ntd, regularization, demonstration):
-    if demonstration == "ON":
+def LEARN_BY_NELR(si, pl, ntds, ntf, nds, pefl, ntd, reg, demo): # NELR: NORMAL_EQUATION_based_LINEAR_REGRESSION
+    if demo == "ON":
         print("\n" + "Linear Regression is ON!")
     # building training data
-    regularization_matrix = np.zeros((ntf, ntf), float)
-    np.fill_diagonal(regularization_matrix, regularization)
-    regularization_matrix[0][0] = 0
-    training_X = [[0 for col in range(0, ntf)] for row in range(0, ntds)]
-    training_Y = [0 for row in range(0, ntds)]
-    for row in range(0, ntds):
-        training_X[row][0] = 1
-        for col in range(1, ntf):
-            training_X[row][col] = int(float(pl[stock_id][row + col - 1]))
-    for row in range(0, ntds):
-        training_Y[row] = int(float(pl[stock_id][row + ntf - 1]))
-    BUILD_OCTAVE_TEST_FILE(training_X, training_Y, ntds, ntf)
-    training_X = np.array(training_X)
-    training_Y = np.array(training_Y)
-    normal_training_X, mean, std = NORMALIZE_FEATURES(training_X, ntds, ntf)
+    rm = np.zeros((ntf, ntf), float) # rm: regularization_matrix
+    np.fill_diagonal(rm, reg)
+    rm[0][0] = 0
+    tX = [[0 for c in range(0, ntf)] for row in range(0, ntds)] # tX: training_X
+    tY = [0 for r in range(0, ntds)] # tY: training_Y
+    for r in range(0, ntds): # r: row
+        tX[r][0] = 1
+        for c in range(1, ntf): # c: column
+            tX[r][c] = int(float(pl[si][r + c - 1]))
+    for r in range(0, ntds): # r: row
+        tY[r] = int(float(pl[si][r + ntf - 1]))
+    BUILD_OCTAVE_TEST_FILE(tX, tY, ntds, ntf)
+    tX = np.array(tX)
+    tY = np.array(tY)
+    ntX, mean, std = NORMALIZE_FEATURES(tX, ntds, ntf) # ntX: normalized_training_X
     # calculating learning coefficients
-    temp1 = np.matmul(normal_training_X.transpose(), normal_training_X)
-    temp2 = np.matmul(np.linalg.pinv(temp1 + regularization_matrix), normal_training_X.transpose())
-    theta = np.matmul(temp2, training_Y)
+    temp1 = np.matmul(ntX.transpose(), ntX)
+    temp2 = np.matmul(np.linalg.pinv(temp1 + rm), ntX.transpose())
+    theta = np.matmul(temp2, tY)
     # generating predicted Y for training data
-    training_predicted_Y = np.matmul(normal_training_X, theta)
+    tpY = np.matmul(ntX, theta) # tpY: training_predicted_Y
     # demonstrating training phase
-    if demonstration == "ON":
-        print("MSE on training set: " + str(MSE(training_predicted_Y, training_Y)))
-        print("MAE on training set: " + str(MAE(training_predicted_Y, training_Y)))
-        PLOT_DIAGRAM(pefl, training_Y, training_predicted_Y, 0, 0)
+    if demo == "ON":
+        print("MSE on training set: " + str(MSE(tpY, tY)))
+        print("MAE on training set: " + str(MAE(tpY, tY)))
+        PLOT_DIAGRAM(pefl, tY, tpY, 0, 0)
+
+
+
+
+
+
+
+
+
 
 
 
