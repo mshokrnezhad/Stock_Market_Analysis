@@ -271,35 +271,54 @@ def VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, mean, std, theta, demo):  # 
         print("MAE on validation set: " + str(MAE(vpY, vY)))
         PLOT_TRAINING_DIAGRAM(pefl, vY, vpY, ntds + ntf - 1, 0)
 
-# def VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, demo):  # LT: long term
-#     validation_X = [1 for col in range(0, ntf)]
-#     normal_validation_X = [1 for col in range(0, ntf)]
-#     price_next_day = [0 for row in range(0, nds - ntds)]
-#     validation_Y = [0 for row in range(0, nds - ntds)]
-#     # building validation data
-#     for row in range(0, len(validation_Y)):
-#         validation_Y[row] = int(float(pl[stock_id][ntds + 1 + row]))
-#     for col in range(1, ntf):
-#         validation_X[col] = int(float(pl[stock_id][ntds - ntf + col]))
-#     # calculating next day prices
-#     for day in range(0, len(price_next_day)):
-#         for col in range(1, ntf):
-#             normal_validation_X[col] = (validation_X[col] - mean[col]) / std[col]
-#         price_next_day[day] = math.ceil(np.matmul(normal_validation_X, theta))
-#         validation_X = np.roll(validation_X, -1)
-#         validation_X[ntf - 1] = price_next_day[day]
-#         validation_X[0] = 1
-#
-#     if demonstration == "ON":
-#         print("Expected price of next day: " + str(price_next_day[0]))
-#         prediction_diagram(price_next_day, price_list[stock_id][number_of_dataset_rows - 1])
+def VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, demo):  # LT: long term
+    vY = [0 for x in range(0, nds - (ntds + ntf - 1))]  # vY: validation_Y
+    vpY = [0 for x in range(0, nds - (ntds + ntf - 1))]  # vY: validation_predicted_Y
+    vX = [[0 for x in range(0, ntf)] for y in range(0, nds - (ntds + ntf - 1))]  # vX: validation_X
+    nvX = [[0 for x in range(0, ntf)] for y in range(0, nds - (ntds + ntf - 1))]  # nvX: normalized_validation_X
+    # building validation data and predicted Y
+    for r in range(0, len(vY)):  # r: row
+        if (ntds + ntf - 1 + r) < nds:
+            vY[r] = int(float(pl[si][ntds + ntf - 1 + r]))
+    vY = np.array(vY)
+    for r in range(0, len(vX)):
+        if r == 0:
+            vX[r][0] = 1
+            for c in range(1, ntf):  # c: col
+                vX[r][c] = int(float(pl[si][r + ntds - 1 + c]))
+            for c in range(1, ntf):
+                nvX[r][c] = (vX[r][c] - mean[c]) / std[c]
+            vX = np.array(vX)
+            nvX = np.array(nvX)
+            vpY[r] = math.ceil(np.matmul(nvX[r], theta))
+        else:
+            vX[r][0] = 1
+            for c in range(1, ntf-1):  # c: col
+                vX[r][c] = vX[r-1][c+1]
+            vX[r][ntf-1] = vpY[r-1]
+            for c in range(1, ntf):
+                nvX[r][c] = (vX[r][c] - mean[c]) / std[c]
+            vX = np.array(vX)
+            nvX = np.array(nvX)
+            vpY[r] = math.ceil(np.matmul(nvX[r], theta))
+        print(str(r) + "\n")
+        print(str(vX[r]) + "\n")
+
+    # demonstrating validation phase
+    if demo == "ON":
+        print("MSE on validation set: " + str(MSE(vpY, vY)))
+        print("MAE on validation set: " + str(MAE(vpY, vY)))
+        PLOT_TRAINING_DIAGRAM(pefl, vY, vpY, ntds + ntf - 1, 0)
 
 def PREDICT_LRNE(ntd, ntf, nds, pl, si, mean, std, theta, demo):
     ndp = [0 for x in range(0, ntd)] # ndp: next_days_prices
     ndX = [1 for x in range(0, ntf)] # ndX: next_days_X
     nndX = [1 for x in range(0, ntf)] # nndx: normalized_next_days_X
+    print("\n\n\n\n")
+    print(str(nds - ntf))
     for c in range(1, ntf): # c: column
         ndX[c] = int(float(pl[si][nds - ntf + c]))
+    print(str(ndX) + "\n")
     # calculating netx days prices
     for d in range(0, ntd): # d: day
         for c in range(1, ntf):
@@ -308,6 +327,7 @@ def PREDICT_LRNE(ntd, ntf, nds, pl, si, mean, std, theta, demo):
         ndX = np.roll(ndX, -1)
         ndX[ntf-1] = ndp[d]
         ndX[0] = 1
+        print(str(ndX) + "\n")
     # demonstrating prediction results
     if demo == "ON":
         print("Expected price of next day: " + str(ndp[0]))

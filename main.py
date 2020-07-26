@@ -31,38 +31,48 @@ ndd = [[0. for x in range(ntd)] for y in range(len(sl))] # ndd: next_day_percent
 cp = [0 for x in range(len(sl))] # cp: current_price
 ms = GET_STOCK_LIST_FROM_PROCESSED_FILE(msfp) # ms: my_stocks
 mse = GET_STOCK_LIST_FROM_PROCESSED_FILE(msenfp) # mse: my_stocks_en
-for sn in tqdm(ms, desc="Loading…", ascii=False, ncols=75): # sn: stock_name
-    si = np.where(np.array(ms) == sn)[0][0] # si: stock_index
-    mean, std, theta = LEARN_BY_NELR(si, pl, ntds, ntf, pefl, 5, "OFF")
-    VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "OFF")
-    # VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "ON")
-    (ndp[si], cp[si]) = PREDICT_LRNE(ntd, ntf, nds, pl, si, mean, std, theta, "OFF")
-    # calculating progress percentages
-    for d in range(ntd): # d: day
-        temp1 = int(float(ndp[si][d]))
-        temp2 = int(float(cp[si]))
-        temp3 = temp1 - temp2
-        temp3 = temp3 / temp1
-        temp3 = temp3 * 100
-        ndd[si][d] = math.ceil(temp3 * 100) / 100
-# writing results in file
-open(msafp, 'w').close()
-maf = open(msafp, "w") # maf: ms_analysis_file
-maf.write("------------------------------------------------------------------------" + "\n")
-maf.write("|NAME           |1 DAY     |7 DAY     |1 Month   |2 Month   |3 Month   |" + "\n")
-maf.write("------------------------------------------------------------------------" + "\n")
-for sn in ms:
-    si = np.where(np.array(ms) == sn)[0][0]
-    maf.write("|" + CORRECT_LENGTH(mse[si], 15)
-                           + "|" + CORRECT_LENGTH(str(ndd[si][0]), 10)
-                           + "|" + CORRECT_LENGTH(str(ndd[si][6]), 10)
-                           + "|" + CORRECT_LENGTH(str(ndd[si][29]), 10)
-                           + "|" + CORRECT_LENGTH(str(ndd[si][59]), 10)
-                           + "|" + CORRECT_LENGTH(str(ndd[si][89]), 10) + "\n")
-    maf.write("------------------------------------------------------------------------" + "\n")
-maf.close()
-time.sleep(0.5)
-print("Analysis File is Built.")
+
+
+si = np.where(np.array(ms) == "وتجارت")[0][0] # si: stock_index
+mean, std, theta = LEARN_BY_NELR(si, pl, ntds, ntf, pefl, 5, "OFF")
+VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "OFF")
+VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "ON")
+(ndp[si], cp[si]) = PREDICT_LRNE(ntd, ntf, ntds+ntf-1, pl, si, mean, std, theta, "ON")
+
+
+
+# for sn in tqdm(ms, desc="Loading…", ascii=False, ncols=75): # sn: stock_name
+#     si = np.where(np.array(ms) == sn)[0][0] # si: stock_index
+#     mean, std, theta = LEARN_BY_NELR(si, pl, ntds, ntf, pefl, 5, "OFF")
+#     VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "OFF")
+#     VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "ON")
+#     (ndp[si], cp[si]) = PREDICT_LRNE(ntd, ntf, nds, pl, si, mean, std, theta, "ON")
+#     # calculating progress percentages
+#     for d in range(ntd): # d: day
+#         temp1 = int(float(ndp[si][d]))
+#         temp2 = int(float(cp[si]))
+#         temp3 = temp1 - temp2
+#         temp3 = temp3 / temp1
+#         temp3 = temp3 * 100
+#         ndd[si][d] = math.ceil(temp3 * 100) / 100
+# # writing results in file
+# open(msafp, 'w').close()
+# maf = open(msafp, "w") # maf: ms_analysis_file
+# maf.write("------------------------------------------------------------------------" + "\n")
+# maf.write("|NAME           |1 DAY     |7 DAY     |1 Month   |2 Month   |3 Month   |" + "\n")
+# maf.write("------------------------------------------------------------------------" + "\n")
+# for sn in ms:
+#     si = np.where(np.array(ms) == sn)[0][0]
+#     maf.write("|" + CORRECT_LENGTH(mse[si], 15)
+#                            + "|" + CORRECT_LENGTH(str(ndd[si][0]), 10)
+#                            + "|" + CORRECT_LENGTH(str(ndd[si][6]), 10)
+#                            + "|" + CORRECT_LENGTH(str(ndd[si][29]), 10)
+#                            + "|" + CORRECT_LENGTH(str(ndd[si][59]), 10)
+#                            + "|" + CORRECT_LENGTH(str(ndd[si][89]), 10) + "\n")
+#     maf.write("------------------------------------------------------------------------" + "\n")
+# maf.close()
+# time.sleep(0.5)
+# print("Analysis File is Built.")
 
 
 
