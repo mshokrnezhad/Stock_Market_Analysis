@@ -9,7 +9,7 @@ from tqdm import tqdm
 import time
 
 def GET_STOCK_LIST_FROM_EXCEL_FILES(efp, slfp, efl):
-    print("Extracting Stock List from Excel Files. Please Wait...")
+    print("Extracting stock list from excel files. Please wait...")
     # generating stock list
     sl = ["وتجارت"]
     fi = 0 # fi: file_index
@@ -35,7 +35,7 @@ def GET_STOCK_LIST_FROM_EXCEL_FILES(efp, slfp, efl):
     return sl
 
 def GET_STOCK_LIST_FROM_PROCESSED_FILE(slfp):
-    # print("Loading Stock List. Please Wait...")
+    # print("Loading stock list. Please wait...")
     # reading processed file
     with open(slfp, encoding="utf8") as data:
         sl = [] # sl: stock_list
@@ -86,7 +86,7 @@ def BUILD_PRICES_FILE(fn, n, p):
     pf.close()
 
 def GET_PRICE_LIST_FROM_EXCEL_FILES(sl, efp, plfp):
-    print("Generating Prices File. Please Wait...")
+    print("Generating prices file. Please wait...")
     efl = [f for f in listdir(efp) if isfile(join(efp, f))] # efl: excel_files_list
     pl = [[0 for x in range(len(efl))] for y in range(len(sl))] # pl: price_list
     lvp = [1 for x in range(len(sl))] # lvp: last_valid_price
@@ -117,7 +117,7 @@ def GET_PRICE_LIST_FROM_EXCEL_FILES(sl, efp, plfp):
     return pl
 
 def GET_PRICE_LIST_FROM_PROCESSED_FILE(plfp, ns, nds):
-    # print("Loading Price List. Please Wait...")
+    # print("Loading price list. Please wait...")
     with open(plfp, encoding="utf8") as data:
         pl = [[0 for x in range(nds)] for y in range(ns)] # pl: price_list
         sni = 0 # sni:stock_name_index
@@ -128,6 +128,17 @@ def GET_PRICE_LIST_FROM_PROCESSED_FILE(plfp, ns, nds):
             sni += 1
     # print("Done!")
     return pl
+
+def EXTRACT_VALID_STOCKS(pl, nds):
+    vs = [0 for x in range(0, len(pl))]
+    for si in range(len(pl)):
+        index = 0
+        for ds in range(nds):
+            if int(float(pl[si][ds])) > 1:
+                index += 1
+        if index > math.ceil(0.8*nds):
+            vs[si] = 1
+    return vs
 
 def NORMALIZE_FEATURES(X, ntds, ntf):
     nX = np.zeros(shape=(ntds, ntf)) # nX: normalized_X
@@ -315,15 +326,22 @@ def VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, sn, mean, std, theta, demo): 
 
 def PREDICT_LRNE(ntd, ntf, nds, pl, si, sn, mean, std, theta, demo):
     ndp = [0 for x in range(0, ntd)] # ndp: next_days_prices
+    ndp = np.int64(ndp)
     ndX = [1 for x in range(0, ntf)] # ndX: next_days_X
+    ndX = np.int64(ndX)
     nndX = [1 for x in range(0, ntf)] # nndx: normalized_next_days_X
+    nndx = np.int64(nndX)
+    theta = np.round(theta, decimals=4)
     for c in range(1, ntf): # c: column
         ndX[c] = int(float(pl[si][nds - ntf + c]))
     # calculating netx days prices
     for d in range(0, ntd): # d: day
         for c in range(1, ntf):
             nndX[c] = (ndX[c] - mean[c]) / std[c]
-        ndp[d] = math.ceil(np.matmul(nndX, theta))
+        if math.ceil(np.matmul(nndX, theta)) <= 0:
+            ndp[d] = 1
+        else:
+            ndp[d] = math.ceil(np.matmul(nndX, theta))
         ndX = np.roll(ndX, -1)
         ndX[ntf-1] = ndp[d]
         ndX[0] = 1
