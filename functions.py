@@ -89,11 +89,11 @@ def GET_PRICE_LIST_FROM_EXCEL_FILES(sl, efp, plfp):
     print("Generating Prices File. Please Wait...")
     efl = [f for f in listdir(efp) if isfile(join(efp, f))] # efl: excel_files_list
     pl = [[0 for x in range(len(efl))] for y in range(len(sl))] # pl: price_list
-    lvp = [0 for x in range(len(sl))] # lvp: last_valid_price
+    lvp = [1 for x in range(len(sl))] # lvp: last_valid_price
     BUILD_PRELIMINARY_FILE(plfp, len(sl))
     # generating price list
     efi = 0 # efi: excel_file_index
-    for ef in tqdm(efi, desc="Loading…", ascii=False, ncols=75): # ef: excel_file
+    for ef in tqdm(efl, desc="Loading…", ascii=False, ncols=75): # ef: excel_file
         cp = [0] * len(sl) # cp: current_price
         (wbs, wbp) = GET_WORK_BOOK_INFO(efp + "/" + ef) # wbs: wb_stocks, wbp: wb_prices
         for sn in sl: # sn: stock_name
@@ -104,7 +104,7 @@ def GET_PRICE_LIST_FROM_EXCEL_FILES(sl, efp, plfp):
                 elif wbp[wbs.index(sn)] == 0 and lvp[sl.index(sn)] != 0:
                     cp[sl.index(sn)] = lvp[sl.index(sn)]
                 elif wbp[wbs.index(sn)] == 0 and lvp[sl.index(sn)] == 0:
-                    cp[sl.index(sn)] = 0
+                    cp[sl.index(sn)] = 1
             else:
                 cp[sl.index(sn)] = lvp[sl.index(sn)]
         tsi = 0 # tsi: temp_stock_index
@@ -177,32 +177,39 @@ def PROCESS_EXCEL_FILES_LIST(efp, nds):
         pefl[fn] = re.sub('.xlsx', "", re.sub('_', "", re.sub('MarketWatchPlus-13', "", pefl[fn])))
     return efl, pefl
 
-def PLOT_TRAINING_DIAGRAM(pefl, Y, pY, li, ntd): # pY: predicted_Y, li: label_index
+def PLOT_TRAINING_DIAGRAM(pefl, Y, pY, li, ntd, title): # pY: predicted_Y, li: label_index
     #  generating x axis label
     if ntd > 0:
         ed = ["" for x in range(ntd)] # ed: extra_days
         for d in range(ntd): # d: day
             ed[d] = "day+" + str(d + 1)
-        pefl =  pefl + ed
+        pefl = pefl + ed
+    for n in range(len(pefl)):
+        pefl[n] = " "
     pefl = np.array(pefl)
     tefl =np.split(pefl, [li, len(Y) + li])[1] # tefl: temporary_efl
     # plotting diagram
     l = np.arange(li, li + len(Y), 1) # l: label
     plt.plot(l, Y, 'r--', l, pY, 'b*')
     plt.xticks(l, tefl, rotation='vertical')
+    plt.title(title)
     plt.grid()
     plt.show()
 
-def PLOT_PREDICTION_DIAGRAM(pnd, p): # pnd: price_of_next_days, p: price
+def PLOT_PREDICTION_DIAGRAM(pnd, p, title): # pnd: price_of_next_days, p: price
     # generating x axis label for prediction phase
     Xl = np.arange(0, len(pnd), 1) # Xl: X_label
     lpl = [int(float(p)) for x in range(len(pnd))] # lpl: last_price_line
     ed = ["" for x in range(len(pnd))] # ed: extra_days
     for d in range(0, len(pnd)): # d: day
-        ed[d] = "day+" + str(d + 1)
+        if d%(math.ceil(len(pnd)/10)) == 0:
+            ed[d] = "day+" + str(d + 1)
+        else:
+            ed[d] = " "
     # plotting diagram
     plt.plot(Xl, lpl, 'r--', pnd, 'b*')
     plt.xticks(Xl, ed, rotation='vertical')
+    plt.title(title)
     ax = plt.gca()
     ax.grid(axis='both', which='both')
     plt.show()
@@ -213,7 +220,7 @@ def CORRECT_LENGTH(s, l): # add spaces at the end of s to make its l equal to th
             s = s + " "
     return s
 
-def LEARN_BY_NELR(si, pl, ntds, ntf, pefl, reg, demo): # NELR: NORMAL_EQUATION_based_LINEAR_REGRESSION
+def LEARN_BY_NELR(si, sn, pl, ntds, ntf, pefl, reg, demo): # NELR: NORMAL_EQUATION_based_LINEAR_REGRESSION
     if demo == "ON":
         print("\n" + "Linear Regression is ON!")
     # building training data
@@ -242,10 +249,10 @@ def LEARN_BY_NELR(si, pl, ntds, ntf, pefl, reg, demo): # NELR: NORMAL_EQUATION_b
     if demo == "ON":
         print("MSE on training set: " + str(MSE(tpY, tY)))
         print("MAE on training set: " + str(MAE(tpY, tY)))
-        PLOT_TRAINING_DIAGRAM(pefl, tY, tpY, 0, 0)
+        PLOT_TRAINING_DIAGRAM(pefl, tY, tpY, 0, 0, "Learning Diagram for " + sn)
     return mean, std, theta
 
-def VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, mean, std, theta, demo):  # DBD: day by day
+def VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, sn, mean, std, theta, demo):  # DBD: day by day
     vY = [0 for x in range(0, nds - (ntds + ntf - 1))] # vY: validation_Y
     vX = [[0 for x in range(0, ntf)] for y in range(0, nds - (ntds + ntf - 1))] # vX: validation_X
     nvX = np.zeros(shape=(nds - (ntds + ntf - 1), ntf)) # nvX: normalized_validation_X
@@ -267,11 +274,11 @@ def VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, mean, std, theta, demo):  # 
     vpY = np.matmul(nvX, theta) # vpY: validation_predicted_Y
     # demonstrating validation phase
     if demo == "ON":
-        print("MSE on validation set: " + str(MSE(vpY, vY)))
-        print("MAE on validation set: " + str(MAE(vpY, vY)))
-        PLOT_TRAINING_DIAGRAM(pefl, vY, vpY, ntds + ntf - 1, 0)
+        print("MSE on DBD validation set: " + str(MSE(vpY, vY)))
+        print("MAE on DBD validation set: " + str(MAE(vpY, vY)))
+        PLOT_TRAINING_DIAGRAM(pefl, vY, vpY, ntds + ntf - 1, 0, "Day by Day Validation for " + sn)
 
-def VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, demo):  # LT: long term
+def VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, sn, mean, std, theta, demo):  # LT: long term
     vY = [0 for x in range(0, nds - (ntds + ntf - 1))]  # vY: validation_Y
     vpY = [0 for x in range(0, nds - (ntds + ntf - 1))]  # vY: validation_predicted_Y
     vX = [[0 for x in range(0, ntf)] for y in range(0, nds - (ntds + ntf - 1))]  # vX: validation_X
@@ -286,39 +293,32 @@ def VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, demo):  # L
             vX[r][0] = 1
             for c in range(1, ntf):  # c: col
                 vX[r][c] = int(float(pl[si][r + ntds - 1 + c]))
+            nvX[r][0] = 1
             for c in range(1, ntf):
                 nvX[r][c] = (vX[r][c] - mean[c]) / std[c]
-            vX = np.array(vX)
-            nvX = np.array(nvX)
             vpY[r] = math.ceil(np.matmul(nvX[r], theta))
         else:
             vX[r][0] = 1
             for c in range(1, ntf-1):  # c: col
                 vX[r][c] = vX[r-1][c+1]
             vX[r][ntf-1] = vpY[r-1]
+            nvX[r][0] = 1
             for c in range(1, ntf):
                 nvX[r][c] = (vX[r][c] - mean[c]) / std[c]
-            vX = np.array(vX)
             nvX = np.array(nvX)
             vpY[r] = math.ceil(np.matmul(nvX[r], theta))
-        print(str(r) + "\n")
-        print(str(vX[r]) + "\n")
-
     # demonstrating validation phase
     if demo == "ON":
-        print("MSE on validation set: " + str(MSE(vpY, vY)))
-        print("MAE on validation set: " + str(MAE(vpY, vY)))
-        PLOT_TRAINING_DIAGRAM(pefl, vY, vpY, ntds + ntf - 1, 0)
+        print("MSE on LT validation set: " + str(MSE(vpY, vY)))
+        print("MAE on LT validation set: " + str(MAE(vpY, vY)))
+        PLOT_TRAINING_DIAGRAM(pefl, vY, vpY, ntds + ntf - 1, 0, "Long Term Validation for " + sn)
 
-def PREDICT_LRNE(ntd, ntf, nds, pl, si, mean, std, theta, demo):
+def PREDICT_LRNE(ntd, ntf, nds, pl, si, sn, mean, std, theta, demo):
     ndp = [0 for x in range(0, ntd)] # ndp: next_days_prices
     ndX = [1 for x in range(0, ntf)] # ndX: next_days_X
     nndX = [1 for x in range(0, ntf)] # nndx: normalized_next_days_X
-    print("\n\n\n\n")
-    print(str(nds - ntf))
     for c in range(1, ntf): # c: column
         ndX[c] = int(float(pl[si][nds - ntf + c]))
-    print(str(ndX) + "\n")
     # calculating netx days prices
     for d in range(0, ntd): # d: day
         for c in range(1, ntf):
@@ -327,13 +327,7 @@ def PREDICT_LRNE(ntd, ntf, nds, pl, si, mean, std, theta, demo):
         ndX = np.roll(ndX, -1)
         ndX[ntf-1] = ndp[d]
         ndX[0] = 1
-        print(str(ndX) + "\n")
     # demonstrating prediction results
     if demo == "ON":
-        print("Expected price of next day: " + str(ndp[0]))
-        PLOT_PREDICTION_DIAGRAM(ndp, pl[si][nds-1])
+        PLOT_PREDICTION_DIAGRAM(ndp, pl[si][nds-1], "Prediction for " + sn)
     return ndp, pl[si][nds-1]
-
-
-
-

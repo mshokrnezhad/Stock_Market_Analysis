@@ -23,38 +23,57 @@ ns = len(sl) # ns: number of stocks
 # pl = GET_PRICE_LIST_FROM_EXCEL_FILES(sl, efp, plfp) # pl: price_list
 pl = GET_PRICE_LIST_FROM_PROCESSED_FILE(plfp, ns, nds) # pl: price_list
 
-# analysing my stocks
+# analysing a specific stock
+sn = "شبندر"
+esn = "SHABANDAR" # esn: english_stock_name
+print("\n" + "Analysing " + esn + ":")
 ntd = 90 # number of days you need to predict the prices and percentages
-print("\n" + "Analysing My Current Stocks")
-ndp = [[0 for x in range(ntd)] for y in range(len(sl))] # ndp: next_day_prices
-ndd = [[0. for x in range(ntd)] for y in range(len(sl))] # ndd: next_day_percentages
-cp = [0 for x in range(len(sl))] # cp: current_price
-ms = GET_STOCK_LIST_FROM_PROCESSED_FILE(msfp) # ms: my_stocks
-mse = GET_STOCK_LIST_FROM_PROCESSED_FILE(msenfp) # mse: my_stocks_en
+ndp = [0 for x in range(ntd)] # ndp: next_day_prices
+ndd = [0. for x in range(ntd)] # ndd: next_day_percentages
+cp = 0 # cp: current_price
+si = np.where(np.array(sl) == sn)[0][0]  # si: stock_index
+mean, std, theta = LEARN_BY_NELR(si, esn, pl, ntds, ntf, pefl, 5, "OFF")
+VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, esn, mean, std, theta, "OFF")
+VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, esn, mean, std, theta, "OFF")
+(ndp, cp) = PREDICT_LRNE(ntd, ntf, nds, pl, si, esn, mean, std, theta, "OFF")
+# calculating progress percentages
+for d in range(ntd): # d: day
+    temp1 = int(float(ndp[d]))
+    temp2 = int(float(cp))
+    temp3 = temp1 - temp2
+    temp3 = temp3 / temp2
+    temp3 = temp3 * 100
+    ndd[d] = math.ceil(temp3 * 100) / 100
+# showing results
+print("Current price: " + str(cp))
+print("Expected price of next day: " + str(ndp[0]))
+print("Next day percentage: " + str(ndd[0]) + "%")
+print("Next week percentage: " + str(ndd[6]) + "%")
+print("Next month percentage: " + str(ndd[29]) + "%")
 
-
-si = np.where(np.array(ms) == "وتجارت")[0][0] # si: stock_index
-mean, std, theta = LEARN_BY_NELR(si, pl, ntds, ntf, pefl, 5, "OFF")
-VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "OFF")
-VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "ON")
-(ndp[si], cp[si]) = PREDICT_LRNE(ntd, ntf, ntds+ntf-1, pl, si, mean, std, theta, "ON")
-
-
-
+# # analysing my stocks
+# ntd = 90 # number of days you need to predict the prices and percentages
+# print("\n" + "Analysing My Current Stocks")
+# ndp = [[0 for x in range(ntd)] for y in range(len(sl))] # ndp: next_day_prices
+# ndd = [[0. for x in range(ntd)] for y in range(len(sl))] # ndd: next_day_percentages
+# cp = [0 for x in range(len(sl))] # cp: current_price
+# ms = GET_STOCK_LIST_FROM_PROCESSED_FILE(msfp) # ms: my_stocks
+# mse = GET_STOCK_LIST_FROM_PROCESSED_FILE(msenfp) # mse: my_stocks_en
 # for sn in tqdm(ms, desc="Loading…", ascii=False, ncols=75): # sn: stock_name
-#     si = np.where(np.array(ms) == sn)[0][0] # si: stock_index
-#     mean, std, theta = LEARN_BY_NELR(si, pl, ntds, ntf, pefl, 5, "OFF")
-#     VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "OFF")
-#     VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "ON")
-#     (ndp[si], cp[si]) = PREDICT_LRNE(ntd, ntf, nds, pl, si, mean, std, theta, "ON")
+#     gsi = np.where(np.array(sl) == sn)[0][0] # gsi: general_stock_index
+#     csi = np.where(np.array(ms) == sn)[0][0] # csi: current_stock_index
+#     mean, std, theta = LEARN_BY_NELR(gsi, mse[csi], pl, ntds, ntf, pefl, 5, "OFF")
+#     VALIDATE_LRNE_DBD(pefl, nds, ntds, ntf, pl, gsi, mse[csi], mean, std, theta, "OFF")
+#     VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, gsi, mse[csi], mean, std, theta, "OFF")
+#     (ndp[gsi], cp[gsi]) = PREDICT_LRNE(ntd, ntf, nds, pl, gsi, mse[csi], mean, std, theta, "OFF")
 #     # calculating progress percentages
 #     for d in range(ntd): # d: day
-#         temp1 = int(float(ndp[si][d]))
-#         temp2 = int(float(cp[si]))
+#         temp1 = int(float(ndp[gsi][d]))
+#         temp2 = int(float(cp[gsi]))
 #         temp3 = temp1 - temp2
-#         temp3 = temp3 / temp1
+#         temp3 = temp3 / temp2
 #         temp3 = temp3 * 100
-#         ndd[si][d] = math.ceil(temp3 * 100) / 100
+#         ndd[gsi][d] = math.ceil(temp3 * 100) / 100
 # # writing results in file
 # open(msafp, 'w').close()
 # maf = open(msafp, "w") # maf: ms_analysis_file
@@ -62,58 +81,15 @@ VALIDATE_LRNE_LT(pefl, nds, ntds, ntf, pl, si, mean, std, theta, "ON")
 # maf.write("|NAME           |1 DAY     |7 DAY     |1 Month   |2 Month   |3 Month   |" + "\n")
 # maf.write("------------------------------------------------------------------------" + "\n")
 # for sn in ms:
-#     si = np.where(np.array(ms) == sn)[0][0]
-#     maf.write("|" + CORRECT_LENGTH(mse[si], 15)
-#                            + "|" + CORRECT_LENGTH(str(ndd[si][0]), 10)
-#                            + "|" + CORRECT_LENGTH(str(ndd[si][6]), 10)
-#                            + "|" + CORRECT_LENGTH(str(ndd[si][29]), 10)
-#                            + "|" + CORRECT_LENGTH(str(ndd[si][59]), 10)
-#                            + "|" + CORRECT_LENGTH(str(ndd[si][89]), 10) + "\n")
+#     gsi = np.where(np.array(sl) == sn)[0][0]  # gsi: general_stock_index
+#     csi = np.where(np.array(ms) == sn)[0][0]  # csi: current_stock_index
+#     maf.write("|" + CORRECT_LENGTH(mse[csi], 15)
+#                            + "|" + CORRECT_LENGTH(str(ndd[gsi][0]), 10)
+#                            + "|" + CORRECT_LENGTH(str(ndd[gsi][6]), 10)
+#                            + "|" + CORRECT_LENGTH(str(ndd[gsi][29]), 10)
+#                            + "|" + CORRECT_LENGTH(str(ndd[gsi][59]), 10)
+#                            + "|" + CORRECT_LENGTH(str(ndd[gsi][89]), 10) + "\n")
 #     maf.write("------------------------------------------------------------------------" + "\n")
 # maf.close()
 # time.sleep(0.5)
 # print("Analysis File is Built.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-prediction_day = 90
-price_next_day = [[0 for pd in range(prediction_day)] for si in range(len(sl))]
-percentage_next_day = [[0. for pd in range(prediction_day)] for si in range(len(sl))]
-current_price = [0 for si in range(len(sl))]
-
-
-# predicting future prices of a specific stock
-# stock_index = np.where(np.array(stock_list) == "وتجارت")[0][0]
-# (price_next_day[stock_index], current_price[stock_index]) = linear_regression_NE\
-#         (stock_index, price_list, number_of_training_sets, number_of_training_features, number_of_data_sets,
-#                   processed_excel_files_list, prediction_day, 5, "ON")
-
-
-
-# analysing all stocks
-# print("\n" + "Analysing All Stocks")
-# for sn in tqdm(stock_list, desc="Loading…", ascii=False, ncols=75):
-#     stock_index = np.where(np.array(stock_list) == sn)[0][0]
-#     (price_next_day[stock_index], current_price[stock_index]) = linear_regression_NE\
-#         (stock_index, price_list, number_of_training_sets, number_of_training_features, number_of_data_sets,
-#                   processed_excel_files_list, prediction_day, 5, "OFF")
-
-
-
-
