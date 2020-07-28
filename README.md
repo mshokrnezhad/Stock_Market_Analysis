@@ -1,7 +1,7 @@
 # Stock_Market_Analysis
 To Analyse the Iran's Stock Market using Normal Equation based Linear Regression 
 In this code, for each stock, the price of each day is predicted based on the previous prices of that stock at the previous days.
-To run this code, the market history is retrived form http://www.tsetmc.com/Loader.aspx?ParTree=15131F# (see files in the "excel files" folder)
+To run this code, the market history is retrieved form http://www.tsetmc.com/Loader.aspx?ParTree=15131F# (see files in the "excel files" folder)
 
 The main file has three parts:
 
